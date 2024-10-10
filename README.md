@@ -25,31 +25,59 @@ Testing the C Program for the desired output.
 
 ## C Program that illustrate communication between two process using unnamed pipes using Linux API system calls
 ```
-#include <stdio.h> 
-#include <sys/ipc.h> 
-#include <sys/msg.h> 
-
-// structure for message queue 
-struct mesg_buffer { 
-	long mesg_type; 
-	char mesg_text[100]; 
-} message; 
+#include<stdio.h>
+#include<stdlib.h>
+#include<sys/types.h> 
+#include<sys/stat.h> 
+#include<string.h> 
+#include<fcntl.h> 
+#include<unistd.h>
+#include<sys/wait.h>
+void server(int,int); 
+void client(int,int); 
 int main() 
-{ 	key_t key; 
-	int msgid; 
-// ftok to generate unique key 
-	key = ftok("progfile", 65); 
-	// msgget creates a message queue 
-	// and returns identifier 
-	msgid = msgget(key, 0666 | IPC_CREAT); 
-	message.mesg_type = 1; 
-	printf("Write Data : "); 
-	fgets(message.mesg_text, sizeof(message.mesg_text), stdin); 
-	// msgsnd to send message 
-	msgsnd(msgid, &message, sizeof(message), 0); 
-	// display the message 
-	printf("Data send is : %s \n", message.mesg_text); 
-	return 0; 
+{ 
+int p1[2],p2[2],pid, *waits; 
+pipe(p1); 
+pipe(p2); 
+pid=fork(); 
+if(pid==0) { 
+close(p1[1]); 
+close(p2[0]); 
+server(p1[0],p2[1]); return 0;
+ } 
+close(p1[0]); 
+close(p2[1]); 
+client(p1[1],p2[0]); 
+wait(waits); 
+return 0; 
+} 
+void client(int wfd,int rfd) {
+int i,j,n; char fname[2000];
+char buff[2000];
+printf("ENTER THE FILE NAME :");
+scanf("%s",fname);
+printf("CLIENT SENDING THE REQUEST .... PLEASE WAIT\n");
+sleep(10);
+write(wfd,fname,2000);
+n=read(rfd,buff,2000);
+buff[n]='\0';
+printf("THE RESULTS OF CLIENTS ARE ...... \n"); write(1,buff,n);
+}
+void server(int rfd,int wfd) 
+{ 
+int i,j,n; 
+char fname[2000]; 
+char buff[2000];
+n=read(rfd,fname,2000);
+fname[n]='\0';
+int fd=open(fname,O_RDONLY);
+sleep(10); 
+if(fd<0) 
+write(wfd,"can't open",9); 
+else 
+n=read(fd,buff,2000); 
+write(wfd,buff,n); 
 }
 ```
 
@@ -64,32 +92,15 @@ int main()
 
 ## C Program that illustrate communication between two process using named pipes using Linux API system calls
 ```
+
+#include <stdlib.h>
 #include <stdio.h>
-#include <sys/ipc.h>
-#include <sys/msg.h>
-
-
-struct mesg_buffer {
-	long mesg_type;
-	char mesg_text[100];
-} message;
-int main()
-{
-	key_t key;
-	int msgid;
-
-	key = ftok("progfile", 65);
-
-
-	msgid = msgget(key, 0666 | IPC_CREAT);
-
-	msgrcv(msgid, &message, sizeof(message), 1, 0);
-	
-	printf("Data Received is : %s \n",
-			message.mesg_text);
-
-	msgctl(msgid, IPC_RMID, NULL);
-	return 0;
+#include <sys/types.h>
+#include <sys/stat.h>
+int main(){
+int res = mkfifo("/tmp/my_fifo", 0777);
+if (res == 0) printf("FIFO created\n");
+exit(EXIT_SUCCESS);
 }
 ```
 
